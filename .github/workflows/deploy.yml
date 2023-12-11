@@ -5,8 +5,8 @@ on:
   pull_request:
     branches: [main]
 
-  env:
-    ARTIFACT_NAME: foo_bucket
+env:
+  ARTIFACT_NAME: foo_bucket
 
 jobs:
   test:
