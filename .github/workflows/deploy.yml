@@ -22,7 +22,6 @@ jobs:
         with:
           aws-access-key-id: ${AWS_ACCESS_KEY_ID}
           aws-secret-access-key: ${AWS_SECRET_ACCESS_KEY}
-          aws-region: ${AWS_REGION}
 
       - name: create ecr repo
         run: aws ecr create-repository --repository-name book_recommender_2 --image-scanning-configuration scanOnPush=true --image-tag-mutability MUTABLE
@@ -39,7 +38,6 @@ jobs:
         with:
           aws-access-key-id: ${AWS_ACCESS_KEY_ID}
           aws-secret-access-key: ${AWS_SECRET_ACCESS_KEY}
-          aws-region: ${AWS_REGION}
 
       - name: login - authenticate docker to push to ecr
         run: aws ecr get-login-password | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
@@ -62,7 +60,6 @@ jobs:
         with:
           aws-access-key-id: ${AWS_ACCESS_KEY_ID}
           aws-secret-access-key: ${AWS_SECRET_ACCESS_KEY}
-          aws-region: ${AWS_REGION}
 
       - name: create lambda function
         run: |
