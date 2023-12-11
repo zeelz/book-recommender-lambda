@@ -9,7 +9,7 @@ on:
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.Z_AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.Z_AWS_SECRET_ACCESS_KEY }}
-  REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+  AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
   ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
   ACCOUNT_ID: ${{ secrets.MINWO_ACCOUNT_ID }}
 
@@ -22,7 +22,7 @@ jobs:
         with:
           aws-access-key-id: $AWS_ACCESS_KEY_ID
           aws-secret-access-key: $AWS_SECRET_ACCESS_KEY
-          aws-region: $REGION
+          aws-region: $AWS_REGION
 
       - name: create ecr repo
         run: aws ecr create-repository --repository-name book_recommender_2 --image-scanning-configuration scanOnPush=true --image-tag-mutability MUTABLE
@@ -42,16 +42,16 @@ jobs:
           aws-region: $REGION
 
       - name: login - authenticate docker to push to ecr
-        run: aws ecr get-login-password | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
+        run: aws ecr get-login-password | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
 
       - name: build image
         run: docker build -t book_recommender_2:latest .
 
       - name: tag image
-        run: docker tag book_recommender_2:latest ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/book_recommender_2:latest
+        run: docker tag book_recommender_2:latest ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/book_recommender_2:latest
 
       - name: push image
-        run: docker push ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/book_recommender_2:latest
+        run: docker push ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/book_recommender_2:latest
 
   create_function:
     runs-on: ubuntu-latest
@@ -70,4 +70,4 @@ jobs:
           --function-name book_recommender_2 \
           --package-type Image \
           --role $ROLE_ARN \
-          --code ImageUri=${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/book_recommender_2:latest \
+          --code ImageUri=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/book_recommender_2:latest \
