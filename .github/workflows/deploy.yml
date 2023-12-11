@@ -1,61 +1,73 @@
 name: "Test workflow"
+
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
 
-env:
-  ARTIFACT_NAME: foo_bucket
+# workflow-wide environment or variables
+env: AWS_ACCESS_KEY_ID:${{ secrets.Z_AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY:${{ secrets.Z_AWS_SECRET_ACCESS_KEY }}
+  REGION:${{ secrets.AWS_DEFAULT_REGION }}
+  ROLE_ARN:${{ secrets.LAMBDA_ROLE_ARN }}
+  ACCOUNT_ID:${{ secrets.MINWO_ACCOUNT_ID }}
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: test
-        run: |
-          echo "test passed"
-
-  aws_cli:
+  create_ecr_repo:
     runs-on: ubuntu-latest
     steps:
       - name: aws configure
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.Z_AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.Z_AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          aws-access-key-id: $AWS_ACCESS_KEY_ID
+          aws-secret-access-key: $AWS_SECRET_ACCESS_KEY
+          aws-region: $REGION
 
-      - name: list buckets
-        run: |
-          echo "fake list of buckets" > buckets.txt
-          mkdir foo
-          echo "hello" > foo/world.txt
+      - name: create ecr repo
+        run: aws ecr create-repository --repository-name book_recommender_2 --image-scanning-configuration scanOnPush=true --image-tag-mutability MUTABLE
 
-      - name: upload file
-        uses: actions/upload-artifact@v2
-        with:
-          name: $ARTIFACT_NAME
-          path: |
-            foo
-            buckets.txt
-
-  print_job:
+  build_push:
     runs-on: ubuntu-latest
-    needs: aws_cli
+    needs: create_ecr_repo
     steps:
-      - name: download artifact
-        uses: actions/download-artifact@v2
-        with:
-          name: $ARTIFACT_NAME
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - name: print buckets
+      - name: aws configure
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: $AWS_ACCESS_KEY_ID
+          aws-secret-access-key: $AWS_SECRET_ACCESS_KEY
+          aws-region: $REGION
+
+      - name: login - authenticate docker to push to ecr
+        run: aws ecr get-login-password | docker login --username AWS --password-stdin ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com
+
+      - name: build image
+        run: docker build -t book_recommender_2:latest .
+
+      - name: tag image
+        run: docker tag book_recommender_2:latest ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/book_recommender_2:latest
+
+      - name: push image
+        run: docker push ${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/book_recommender_2:latest
+
+  create_function:
+    runs-on: ubuntu-latest
+    needs: build_push
+    steps:
+      - name: aws configure
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: $AWS_ACCESS_KEY_ID
+          aws-secret-access-key: $AWS_SECRET_ACCESS_KEY
+          aws-region: $REGION
+
+      - name: create lambda function
         run: |
-          cat buckets.txt
-          echo "-----"
-          cat foo/world.txt
-          echo "-----"
-          echo $ARTIFACT_NAME
+          aws lambda create-function \
+          --function-name book_recommender_2 \
+          --package-type Image \
+          --role $ROLE_ARN \
+          --code ImageUri=${ACCOUNT_ID}.dkr.ecr.${REGION}.amazonaws.com/book_recommender_2:latest \
