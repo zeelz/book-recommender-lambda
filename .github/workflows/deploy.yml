@@ -29,13 +29,16 @@ jobs:
       - name: list buckets
         run: |
           aws s3 ls > buckets.txt
-          echo "hello" > world.txt
+          mkdir foo
+          echo "hello" > foo/world.txt
 
       - name: upload file
         uses: actions/upload-artifact@v2
         with:
-          name: buckets
-          path: buckets.txt
+          name: foo_buckets
+          path: |
+            foo
+            buckets.txt
 
   print_job:
     runs-on: ubuntu-latest
@@ -44,9 +47,10 @@ jobs:
       - name: download artifact
         uses: actions/download-artifact@v2
         with:
-          name: buckets
+          name: foo_buckets
 
       - name: print buckets
         run: |
           cat buckets.txt
-          pwd
+          echo "-----"
+          cat foo/world.txt
