@@ -10,6 +10,7 @@ env:
   AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
   ROLE_ARN: ${{ secrets.LAMBDA_ROLE_ARN }}
   ACCOUNT_ID: ${{ secrets.MINWO_ACCOUNT_ID }}
+  IMAGE_URI: 888955769172.dkr.ecr.us-east-1.amazonaws.com/book_recommender_2:latest
 
 jobs:
   create_ecr_repo:
@@ -64,10 +65,12 @@ jobs:
           aws-secret-access-key: ${{ secrets.Z_AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
+      - run: |
+          echo ${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/book_recommender_2:latest
       - name: create lambda function
         run: |
           aws lambda create-function \
           --function-name book_recommender_2 \
           --package-type Image \
           --role $ROLE_ARN \
-          --code ImageUri=${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/book_recommender_2:latest \
+          --code ImageUri=$IMAGE_URI
