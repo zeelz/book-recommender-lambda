@@ -27,12 +27,25 @@ jobs:
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
       - name: list buckets
-        run: aws s3 ls > buckets.txt
+        run: |
+          aws s3 ls > buckets.txt
+          echo "hello" > world.txt
+
+      - name: upload file
+        uses: actions/upload-artifact@v2
+        with:
+          name: buckets
+          path: buckets.txt
 
   print_job:
     runs-on: ubuntu-latest
     needs: aws_cli
     steps:
+      - name: download artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: buckets
+
       - name: print buckets
         run: |
           cat buckets.txt
