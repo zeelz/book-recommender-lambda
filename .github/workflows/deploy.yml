@@ -56,7 +56,7 @@ jobs:
 
   create_function:
     runs-on: ubuntu-latest
-    needs: build_push
+    # needs: build_push
     steps:
       - name: aws configure
         uses: aws-actions/configure-aws-credentials@v2
